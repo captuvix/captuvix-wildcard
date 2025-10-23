@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:80"  # Map host port 8080 to container port 80
+      - "8081:80"  # Map host port 8081 to container port 80
     restart: unless-stopped
     # If you need to override environment variables
     # environment:
