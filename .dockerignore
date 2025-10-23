@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build files
+build
+.svelte-kit
+
+# Version control
+.git
+.gitignore
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE files
+.idea
+.vscode
+
+# Misc
+.DS_Store
+README.md
