@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"  # Map host port 8080 to container port 80
+    restart: unless-stopped
+    # If you need to override environment variables
+    # environment:
+    #   - NODE_ENV=production
+
+    # For development with hot-reloading (uncomment to use)
+    # volumes:
+    #   - ./build:/usr/share/nginx/html
+
+    # Health check for production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # If you need additional services like a backend API
+  # api:
+  #   image: your-api-image
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - web
+
+  # Example of adding Traefik as a reverse proxy with automatic HTTPS
+  # traefik:
+  #   image: traefik:v2.9
+  #   command:
+  #     - "--providers.docker=true"
+  #     - "--providers.docker.exposedbydefault=false"
+  #     - "--entrypoints.web.address=:80"
+  #     - "--entrypoints.websecure.address=:443"
+  #     - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+  #     - "--certificatesresolvers.myresolver.acme.email=your-email@example.com"
+  #     - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  #     - "./letsencrypt:/letsencrypt"
+
+  # Uncomment the following if you need a non-Docker backend for local development
+  # and want to expose it through Docker Compose networking
+  # backend:
+  #   image: node:alpine
+  #   volumes:
+  #     - ../captuvix-backend:/app
+  #   working_dir: /app
+  #   command: bun run dev
+  #   ports:
+  #     - "3000:3000"
+
+networks:
+  default:
+    name: captuvix-network
