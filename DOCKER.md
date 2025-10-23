@@ -1,6 +1,10 @@
 # Docker Deployment Guide for Captuvix Wildcard
 
-This guide explains how to use Docker to deploy the Captuvix Wildcard SvelteKit application as a static site.
+This guide explains how to use Docker to deploy the Captuvix Wildcard SvelteKit application as a subdomain fallback service.
+
+## Purpose
+
+The Captuvix Wildcard application serves as a fallback for when a subdomain that would normally be redirected to the main Captuvix web application doesn't have proper DNS configuration. Instead of showing a generic browser error, it displays a user-friendly error page indicating that the organization wasn't found.
 
 ## Quick Start
 
@@ -17,7 +21,14 @@ docker-compose logs -f
 docker-compose down
 ```
 
-The application will be available at http://localhost:8080
+The application will be available at http://localhost:8081
+
+## Wildcard Subdomain Handling
+
+To properly handle wildcard subdomains, you'll need to configure your web server or load balancer to direct all unmatched subdomains to this service. When using TrueNAS with Portainer, you can:
+
+1. Configure the main Captuvix web application to handle known subdomains
+2. Set up this wildcard service to catch all other `*.captuvix.com` requests
 
 ## Development Workflow
 
@@ -54,29 +65,63 @@ The `docker-compose.yml` file includes:
 
 Customize the Docker Compose file as needed for your specific deployment requirements.
 
-## Production Deployment
+## TrueNAS Deployment with Portainer
 
-For production deployment, consider:
+For deployment on TrueNAS using Portainer:
 
-1. Using a reverse proxy (like Traefik) for SSL/TLS
-2. Setting appropriate environment variables
-3. Configuring proper networking and security
+1. Upload the project files to your TrueNAS server or use Git integration in Portainer
+2. In Portainer, go to "Stacks" and click "Add stack"
+3. Name your stack (e.g., "captuvix-wildcard")
+4. Either upload your docker-compose.yml file or paste its contents
+5. Click "Deploy the stack"
 
-Example for enabling the Traefik configuration:
+### Port Conflict Resolution
 
-1. Uncomment the Traefik service in docker-compose.yml
-2. Update the email address for Let's Encrypt
-3. Add labels to the web service:
+If you encounter a port conflict error like:
+
+```
+Error response from daemon: driver failed programming external connectivity on endpoint:
+Bind for 0.0.0.0:8081 failed: port is already allocated
+```
+
+Simply edit the docker-compose.yml file to use a different port:
+
+```yaml
+ports:
+  - "8082:80"  # Or any other available port
+```
+
+### Wildcard DNS Configuration for TrueNAS
+
+To handle wildcard subdomains on TrueNAS:
+
+1. **Configure DNS**: Set up a wildcard DNS record for your domain
+   - Add a `*.captuvix.com` CNAME or A record pointing to your TrueNAS server
+
+2. **Configure Reverse Proxy**: Use either:
+   - **Traefik**: Uncomment and configure the Traefik service in docker-compose.yml
+   - **NGINX Proxy Manager**: Set up a "catch-all" rule for unmatched subdomains
+   - **TrueNAS built-in proxy**: Configure a wildcard rule in the TrueNAS UI
+
+3. **Priority Configuration**: Ensure that:
+   - Specific subdomains (like `app.captuvix.com`) are handled by their respective services
+   - All other subdomains fall back to this wildcard service
+
+### Example Traefik Configuration
+
+For wildcard domain handling with Traefik:
 
 ```yaml
 services:
-  web:
+  wildcard:
     # ... existing configuration ...
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wildcard.rule=Host(`wildcard.captuvix.com`)"
+      - "traefik.http.routers.wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.captuvix.com`)"
+      - "traefik.http.routers.wildcard.priority=1"  # Low priority (fallback)
       - "traefik.http.routers.wildcard.entrypoints=websecure"
       - "traefik.http.routers.wildcard.tls.certresolver=myresolver"
+      - "traefik.http.services.wildcard.loadbalancer.server.port=80"
 ```
 
 ## Environment Variables
